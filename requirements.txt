@@ -1,0 +1,15 @@
+# Telegram Bot
+aiogram==3.4.1
+
+# APortals Library (НЕ opportalsmp!)
+aportalsmp==0.1.0
+
+# Async PostgreSQL + ORM
+SQLAlchemy==2.0.23
+asyncpg==0.29.0
+
+# .env поддержка
+python-dotenv==1.0.1
+
+# Логирование
+loguru==0.7.2
