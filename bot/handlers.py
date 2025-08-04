@@ -1,5 +1,4 @@
 # bot/handlers.py
-
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -24,7 +23,7 @@ async def cmd_start(message: types.Message):
 @router.message(Command("filters"))
 async def cmd_filters(message: types.Message):
     async for session in get_db():
-        filters = await get_filters(session)
+        filters = await get_filters(session, user_id=message.from_user.id)
         if not filters:
             await message.answer("❌ У тебя пока нет фильтров.")
             return
@@ -68,7 +67,7 @@ async def fsm_price(message: types.Message, state: FSMContext):
     await state.update_data(price_limit=price)
     data = await state.get_data()
 
-    # Сохраняем фильтр
+    # 💾 Сохраняем фильтр с привязкой к user_id
     async for session in get_db():
         new_filter = await save_filter(session, {
             "collection": data["collection"],
@@ -76,7 +75,7 @@ async def fsm_price(message: types.Message, state: FSMContext):
             "backdrop": data["backdrop"],
             "symbol": None,
             "price_limit": data["price_limit"]
-        })
+        }, user_id=message.from_user.id)
 
     await message.answer(f"✅ Фильтр сохранён с ID: {new_filter.id}")
     await state.clear()
@@ -89,7 +88,7 @@ async def cmd_delete_filter(message: types.Message):
 async def handle_filter_delete(message: types.Message):
     filter_id = int(message.text.strip())
     async for session in get_db():
-        success = await delete_filter(session, filter_id)
+        success = await delete_filter(session, filter_id, user_id=message.from_user.id)
     if success:
         await message.answer(f"✅ Фильтр {filter_id} удалён.")
     else:
