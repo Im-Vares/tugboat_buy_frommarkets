@@ -27,6 +27,8 @@ async def init_aportals():
 
 
 def sanitize_filename(s: str) -> str:
+    if not s:
+        return "none"
     return re.sub(r"[^\w\s\-]", "", s).strip().replace(" ", "_")
 
 
@@ -36,16 +38,12 @@ async def search_gifts_by_filter(collection: str, model: str, backdrop: str, pri
 
     logger.info(f"🔎 Ищем подарки: collection='{collection}' model='{model}' backdrop='{backdrop}' price_limit={price_limit}")
 
-    collection = collection or ""
-    model = model or ""
-    backdrop = backdrop or ""
-
     try:
         gifts = await search(
             sort="price_asc",
-            gift_name=collection,
-            model=model,
-            backdrop=backdrop,
+            gift_name=collection or "",
+            model=model or "",
+            backdrop=backdrop or "",
             max_price=price_limit,
             authData=authData
         )
@@ -81,11 +79,11 @@ async def search_gifts_by_filter(collection: str, model: str, backdrop: str, pri
 
             result.append(g_dict)
 
-    # 🧠 Генерация уникального имени файла
+    # 💾 Сохраняем в уникальный файл
     try:
-        safe_name = f"{sanitize_filename(collection)}_{sanitize_filename(model)}_{sanitize_filename(backdrop)}_{price_limit}.json"
-        output_path = Path("data") / safe_name
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        Path("data").mkdir(parents=True, exist_ok=True)
+        filename = f"{sanitize_filename(collection)}_{sanitize_filename(model)}_{sanitize_filename(backdrop)}_{price_limit}.json"
+        output_path = Path("data") / filename
 
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)

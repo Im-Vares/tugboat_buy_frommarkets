@@ -1,15 +1,20 @@
-# Telegram Bot
+# Основные библиотеки
 aiogram==3.4.1
+pyrogram==2.0.106
+tgcrypto==1.2.5
 
-# APortals Library (НЕ opportalsmp!)
-aportalsmp==0.1.0
+# Работа с API / APortals
+aportalsmp
 
-# Async PostgreSQL + ORM
-SQLAlchemy==2.0.23
+# Асинхронная БД
+SQLAlchemy==2.0.30
 asyncpg==0.29.0
 
-# .env поддержка
+# Логгирование
+loguru==0.7.2
+
+# Работа с .env
 python-dotenv==1.0.1
 
-# Логирование
-loguru==0.7.2
+# Прочее
+uvloop==0.19.0
