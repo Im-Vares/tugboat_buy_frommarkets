@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Env
+.env
+.env.*
+
+# Venv
+venv/
+.venv/
+ENV/
+env.bak/
+*.envrc
+
+# Byte-compiled / cache
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.log
+
+# Pyrogram / Session
+*.session
+*.session-journal
+
+# VSCode
+.vscode/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
+*.sock
+logs/
+build/
+*.log
+*.db
+
+# Alembic (если добавишь)
+migrations/
+alembic/
+
+# Pytest cache
+.cache/
+.pytest_cache/
