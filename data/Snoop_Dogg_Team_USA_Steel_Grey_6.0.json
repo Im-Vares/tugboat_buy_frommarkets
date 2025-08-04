@@ -1,0 +1,376 @@
+[
+  {
+    "id": "6e56f223-aed2-4f6f-91fb-d308c75c7069",
+    "tg_id": "1746071",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 439141,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-439141.large.jpg",
+    "price": "1.31",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Cap",
+        "rarity_per_mille": 0.5
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-08-04T14:31:22.394163Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-439141.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-07-31T20:05:57Z",
+    "is_owned": false
+  },
+  {
+    "id": "b7607796-badf-4cc6-b943-c25dfd4ed55d",
+    "tg_id": "1795189",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 338795,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-338795.large.jpg",
+    "price": "1.42",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Toilet Paper",
+        "rarity_per_mille": 0.4
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-08-02T18:10:51.426601Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-338795.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-07-31T17:32:33Z",
+    "is_owned": false
+  },
+  {
+    "id": "66f2815a-e13d-4b88-8802-36a26223a2ac",
+    "tg_id": "1761171",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 477322,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-477322.large.jpg",
+    "price": "1.47",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Mountain Goat",
+        "rarity_per_mille": 0.5
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-08-02T06:36:26.10737Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-477322.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-08-01T03:39:01Z",
+    "is_owned": false
+  },
+  {
+    "id": "7db2a716-102c-44c5-b09f-bcf8caa49208",
+    "tg_id": "1855188",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 242335,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-242335.large.jpg",
+    "price": "1.5",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Shooting Star",
+        "rarity_per_mille": 0.5
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-08-04T00:33:26.911272Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-242335.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-07-31T16:28:26Z",
+    "is_owned": false
+  },
+  {
+    "id": "1d0ff144-25e3-4a9d-94c4-6cb471aea8ce",
+    "tg_id": "1806097",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 134616,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-134616.large.jpg",
+    "price": "1.8",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Fez",
+        "rarity_per_mille": 0.5
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-08-04T18:45:25.158855Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-134616.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-07-31T13:51:27Z",
+    "is_owned": false
+  },
+  {
+    "id": "ae6fb3c6-48a3-46e0-8c80-80d1eee24e30",
+    "tg_id": "1620913",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 47758,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-47758.large.jpg",
+    "price": "1.98",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Bubbles",
+        "rarity_per_mille": 0.5
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-07-31T15:39:53.696885Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-47758.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-07-31T10:59:09Z",
+    "is_owned": false
+  },
+  {
+    "id": "73f43cb6-7d6f-492c-88d4-1b99bb43b8a2",
+    "tg_id": "1635812",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 242169,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-242169.large.jpg",
+    "price": "2",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Hamburger",
+        "rarity_per_mille": 0.5
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-07-31T16:44:29.831958Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-242169.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-07-31T16:28:20Z",
+    "is_owned": false
+  },
+  {
+    "id": "1b1feb3a-bd3e-4ada-86b5-21850ff1b520",
+    "tg_id": "1630576",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 189883,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-189883.large.jpg",
+    "price": "2.4",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Ice Cream",
+        "rarity_per_mille": 0.2
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-08-04T04:16:54.174822Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-189883.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-07-31T15:59:41Z",
+    "is_owned": false
+  },
+  {
+    "id": "34b545f1-0e28-497e-a41c-67cd51b0dc9a",
+    "tg_id": "1749765",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 176981,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-176981.large.jpg",
+    "price": "3",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Lemon",
+        "rarity_per_mille": 0.2
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-08-01T21:59:08.441461Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-176981.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-07-31T15:52:48Z",
+    "is_owned": false
+  },
+  {
+    "id": "2b08f7e5-3454-4b1b-aa16-fed2f05ca363",
+    "tg_id": "1714054",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 271907,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-271907.large.jpg",
+    "price": "3.2",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Cash",
+        "rarity_per_mille": 0.4
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-08-01T14:18:00.016362Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-271907.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-07-31T16:46:03Z",
+    "is_owned": false
+  },
+  {
+    "id": "ac52d81c-1578-4df6-a541-025da2ad5847",
+    "tg_id": "1651911",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 69864,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-69864.large.jpg",
+    "price": "5.27",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Team USA",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Nigiri",
+        "rarity_per_mille": 0.5
+      },
+      {
+        "type": "backdrop",
+        "value": "Steel Grey",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-07-31T18:28:57.684224Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-69864.lottie.json",
+    "emoji_id": "5408969469122867955",
+    "has_animation": true,
+    "floor_price": "1.22",
+    "unlocks_at": "2025-07-31T11:54:29Z",
+    "is_owned": false
+  }
+]

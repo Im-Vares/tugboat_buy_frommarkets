@@ -1,45 +1,97 @@
-# aportals/search_logic.py
-
-import asyncio
-from loguru import logger
-from aportalsmp.auth import update_auth
+from pathlib import Path
+import json
+import re
 from aportalsmp.gifts import search
-from config import API_ID, API_HASH
+from aportalsmp.auth import update_auth
+from db.pending_gift_service import save_pending_gift, is_gift_already_pending
+from db.db import get_db
+from loguru import logger
+from config import API_ID, API_HASH, SESSION_NAME
 
-async def search_gifts_by_filter(collection: str, model: str, backdrop: str, price_limit: float):
+authData = None
+
+
+async def init_aportals():
+    global authData
+    logger.info("🔌 Авторизация в APortals...")
     try:
-        auth = await update_auth(API_ID, API_HASH)
-        logger.info(f"📡 Поиск подарков: {collection} | {model} | {backdrop} | до {price_limit} TON")
+        authData = await update_auth(
+            api_id=API_ID,
+            api_hash=API_HASH,
+            session_name=SESSION_NAME
+        )
+        logger.success("✅ Авторизация прошла успешно!")
+    except Exception as e:
+        logger.error(f"❌ Ошибка авторизации: {e}")
+        authData = None
 
-        results = await search(
+
+def sanitize_filename(s: str) -> str:
+    return re.sub(r"[^\w\s\-]", "", s).strip().replace(" ", "_")
+
+
+async def search_gifts_by_filter(collection: str, model: str, backdrop: str, price_limit: float, filter_id: int):
+    if not authData:
+        raise ValueError("❌ authData не инициализирован, вызови init_aportals()")
+
+    logger.info(f"🔎 Ищем подарки: collection='{collection}' model='{model}' backdrop='{backdrop}' price_limit={price_limit}")
+
+    collection = collection or ""
+    model = model or ""
+    backdrop = backdrop or ""
+
+    try:
+        gifts = await search(
             sort="price_asc",
-            offset=0,
-            limit=10,
             gift_name=collection,
             model=model,
             backdrop=backdrop,
-            symbol=[],
-            min_price=1,
-            max_price=999999,
-            authData=auth
+            max_price=price_limit,
+            authData=authData
         )
-
-        if not results:
-            logger.warning("❌ Подарки не найдены.")
-            return []
-
-        matched = []
-        for gift in results:
-            match = {
-                "id": gift.id,
-                "name": gift.name,
-                "price": gift.price,
-                "status": "✅ можно брать" if gift.price <= price_limit else "⚠️ цена выше лимита"
-            }
-            matched.append(match)
-
-        return matched
-
     except Exception as e:
-        logger.error(f"Ошибка при поиске: {e}")
+        logger.error(f"❌ Ошибка при поиске через API: {e}")
         return []
+
+    result = []
+
+    async for session in get_db():
+        for g in gifts:
+            price = g.price
+            if price is None:
+                continue
+
+            gift_id = g.id or getattr(g, "nft_id", None)
+            if not gift_id:
+                continue
+
+            g_dict = g.__dict__.copy()
+
+            if price <= price_limit:
+                already_saved = await is_gift_already_pending(session, filter_id, gift_id)
+                if not already_saved:
+                    logger.success(f"🎁 Новый подходящий подарок: {g.name} за {price} TON")
+                    await save_pending_gift(session, filter_id, g_dict)
+                else:
+                    logger.debug(f"🔁 Подарок уже был найден: {gift_id}")
+
+                g_dict["status"] = "✅ Подходит по фильтру"
+            else:
+                g_dict["status"] = f"❌ Дорогой: {price} TON > {price_limit} TON"
+
+            result.append(g_dict)
+
+    # 🧠 Генерация уникального имени файла
+    try:
+        safe_name = f"{sanitize_filename(collection)}_{sanitize_filename(model)}_{sanitize_filename(backdrop)}_{price_limit}.json"
+        output_path = Path("data") / safe_name
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        logger.info(f"📦 Сохранили подарки фильтра в {output_path}")
+    except Exception as e:
+        logger.error(f"❌ Ошибка при сохранении JSON-файла: {e}")
+
+    return result

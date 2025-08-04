@@ -1,6 +1,7 @@
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.models import Filter
+from sqlalchemy import delete
+from db.models import Filter, PendingGift
 
 
 async def save_filter(session: AsyncSession, data: dict, user_id: int) -> Filter:
@@ -11,8 +12,12 @@ async def save_filter(session: AsyncSession, data: dict, user_id: int) -> Filter
     return new_filter
 
 
-async def get_filters(session: AsyncSession, user_id: int) -> list[Filter]:
-    result = await session.execute(select(Filter).where(Filter.user_id == user_id))
+async def get_filters(session: AsyncSession, user_id: int | None = None) -> list[Filter]:
+    query = select(Filter)
+    if user_id is not None:
+        query = query.where(Filter.user_id == user_id)
+
+    result = await session.execute(query)
     return result.scalars().all()
 
 
@@ -22,6 +27,11 @@ async def delete_filter(session: AsyncSession, filter_id: int, user_id: int) -> 
     )
     f = result.scalar_one_or_none()
     if f:
+        # 1. Удаляем связанные pending_gifts
+        await session.execute(
+            delete(PendingGift).where(PendingGift.filter_id == filter_id)
+        )
+        # 2. Удаляем сам фильтр
         await session.delete(f)
         await session.commit()
         return True
