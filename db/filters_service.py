@@ -2,16 +2,8 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
 from db.models import Filter, PendingGift
+from shared.utils import get_filter_filename  # ✅ импорт из shared
 from pathlib import Path
-import re
-
-
-def sanitize_filename(s: str) -> str:
-    return re.sub(r"[^\w\s\-]", "", s or "").strip().replace(" ", "_") or "none"
-
-
-def get_filter_filename(collection: str, model: str, backdrop: str, price_limit: float) -> str:
-    return f"{sanitize_filename(collection)}_{sanitize_filename(model)}_{sanitize_filename(backdrop)}_{price_limit}.json"
 
 
 async def save_filter(session: AsyncSession, data: dict, user_id: int) -> Filter:

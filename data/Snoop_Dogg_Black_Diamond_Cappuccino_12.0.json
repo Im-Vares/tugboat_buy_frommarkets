@@ -1,0 +1,104 @@
+[
+  {
+    "id": "17e168a2-791b-4d80-a45e-1577365332df",
+    "tg_id": "1708927",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 211847,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-211847.large.jpg",
+    "price": "2.2",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Black Diamond",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Shark Knife",
+        "rarity_per_mille": 0.5
+      },
+      {
+        "type": "backdrop",
+        "value": "Cappuccino",
+        "rarity_per_mille": 1.2
+      }
+    ],
+    "listed_at": "2025-08-05T08:18:34.136271Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-211847.lottie.json",
+    "emoji_id": "5413350267045314415",
+    "has_animation": true,
+    "floor_price": "1.21",
+    "unlocks_at": "2025-07-31T16:11:35Z",
+    "is_owned": false
+  },
+  {
+    "id": "160e6ea6-c8b4-432c-ae35-bf0760950239",
+    "tg_id": "1766863",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 200571,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-200571.large.jpg",
+    "price": "5",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Black Diamond",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Palette",
+        "rarity_per_mille": 0.4
+      },
+      {
+        "type": "backdrop",
+        "value": "Cappuccino",
+        "rarity_per_mille": 1.2
+      }
+    ],
+    "listed_at": "2025-08-02T09:17:34.483957Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-200571.lottie.json",
+    "emoji_id": "5413350267045314415",
+    "has_animation": true,
+    "floor_price": "1.21",
+    "unlocks_at": "2025-07-31T16:05:21Z",
+    "is_owned": false
+  },
+  {
+    "id": "76f142b7-a67f-4519-bab9-37568f88ea97",
+    "tg_id": "1833341",
+    "collection_id": "5b4448f0-4805-4c4c-8246-972b82f709bc",
+    "external_collection_number": 447611,
+    "name": "Snoop Dogg",
+    "photo_url": "https://nft.fragment.com/gift/snoopdogg-447611.large.jpg",
+    "price": "5",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Black Diamond",
+        "rarity_per_mille": 2.5
+      },
+      {
+        "type": "symbol",
+        "value": "Bubbles",
+        "rarity_per_mille": 0.5
+      },
+      {
+        "type": "backdrop",
+        "value": "Cappuccino",
+        "rarity_per_mille": 1.2
+      }
+    ],
+    "listed_at": "2025-08-05T00:14:52.364895Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/snoopdogg-447611.lottie.json",
+    "emoji_id": "5413350267045314415",
+    "has_animation": true,
+    "floor_price": "1.21",
+    "unlocks_at": "2025-07-31T20:37:06Z",
+    "is_owned": false
+  }
+]

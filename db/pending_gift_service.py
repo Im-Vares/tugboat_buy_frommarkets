@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import update, delete
 from db.models import PendingGift
-from sqlalchemy import update
 
 
 async def save_pending_gift(session: AsyncSession, filter_id: int, gift: dict):
@@ -34,12 +34,18 @@ async def mark_gift_as_sent(session: AsyncSession, gift_id: int):
     )
     await session.commit()
 
+
 async def is_gift_already_pending(session: AsyncSession, filter_id: int, gift_id: str) -> bool:
-    from sqlalchemy import select
-    from db.models import PendingGift
     result = await session.execute(
         select(PendingGift)
         .where(PendingGift.filter_id == filter_id)
         .where(PendingGift.gift_json["id"].as_string() == gift_id)
     )
     return result.scalar_one_or_none() is not None
+
+
+async def delete_pending_gifts_by_filter(session: AsyncSession, filter_id: int):
+    await session.execute(
+        delete(PendingGift).where(PendingGift.filter_id == filter_id)
+    )
+    await session.commit()

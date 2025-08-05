@@ -6,9 +6,12 @@ from aportalsmp.auth import update_auth
 from db.pending_gift_service import save_pending_gift, is_gift_already_pending
 from db.db import get_db
 from loguru import logger
-from config import API_ID, API_HASH, SESSION_NAME
+from config import API_ID, API_HASH, SESSION_NAME, BOT_TOKEN
+from shared.utils import get_filter_filename  # ✅ общий метод имени файла
+from aiogram import Bot
 
 authData = None
+bot = Bot(token=BOT_TOKEN)
 
 
 async def init_aportals():
@@ -26,13 +29,7 @@ async def init_aportals():
         authData = None
 
 
-def sanitize_filename(s: str) -> str:
-    if not s:
-        return "none"
-    return re.sub(r"[^\w\s\-]", "", s).strip().replace(" ", "_")
-
-
-async def search_gifts_by_filter(collection: str, model: str, backdrop: str, price_limit: float, filter_id: int):
+async def search_gifts_by_filter(collection: str, model: str, backdrop: str, price_limit: float, filter_id: int, user_id: int):
     if not authData:
         raise ValueError("❌ authData не инициализирован, вызови init_aportals()")
 
@@ -70,6 +67,25 @@ async def search_gifts_by_filter(collection: str, model: str, backdrop: str, pri
                 if not already_saved:
                     logger.success(f"🎁 Новый подходящий подарок: {g.name} за {price} TON")
                     await save_pending_gift(session, filter_id, g_dict)
+
+                    # 📤 Уведомление в Telegram
+                    photo = g_dict.get("photo_url")
+                    price_val = g_dict.get("price")
+                    name = g_dict.get("name", "Подарок")
+                    if photo and price_val:
+                        try:
+                            await bot.send_photo(
+                                chat_id=user_id,
+                                photo=photo,
+                                caption=(
+                                    f"🎁 <b>{name}</b>\n"
+                                    f"💰 Цена: <b>{price_val} TON</b>\n\n"
+                                    f"✅ Подходит по фильтру. Ожидаем покупку..."
+                                ),
+                                parse_mode="HTML"
+                            )
+                        except Exception as e:
+                            logger.error(f"❌ Ошибка при отправке уведомления: {e}")
                 else:
                     logger.debug(f"🔁 Подарок уже был найден: {gift_id}")
 
@@ -82,7 +98,7 @@ async def search_gifts_by_filter(collection: str, model: str, backdrop: str, pri
     # 💾 Сохраняем в уникальный файл
     try:
         Path("data").mkdir(parents=True, exist_ok=True)
-        filename = f"{sanitize_filename(collection)}_{sanitize_filename(model)}_{sanitize_filename(backdrop)}_{price_limit}.json"
+        filename = get_filter_filename(collection, model, backdrop, price_limit)
         output_path = Path("data") / filename
 
         with open(output_path, "w", encoding="utf-8") as f:
