@@ -1,3 +1,5 @@
+# aportals/search_logic.py
+
 from pathlib import Path
 import json
 import re
@@ -7,7 +9,7 @@ from db.pending_gift_service import save_pending_gift, is_gift_already_pending
 from db.db import get_db
 from loguru import logger
 from config import API_ID, API_HASH, SESSION_NAME, BOT_TOKEN
-from shared.utils import get_filter_filename  # ✅ общий метод имени файла
+from shared.utils import get_filter_filename, send_json_to_socket
 from aiogram import Bot
 
 authData = None
@@ -69,27 +71,29 @@ async def search_gifts_by_filter(collection: str, model: str, backdrop: str, pri
                     await save_pending_gift(session, filter_id, g_dict)
 
                     # 📤 Уведомление в Telegram
-                    photo = g_dict.get("photo_url")
-                    price_val = g_dict.get("price")
-                    name = g_dict.get("name", "Подарок")
-                    if photo and price_val:
-                        try:
-                            await bot.send_photo(
-                                chat_id=user_id,
-                                photo=photo,
-                                caption=(
-                                    f"🎁 <b>{name}</b>\n"
-                                    f"💰 Цена: <b>{price_val} TON</b>\n\n"
-                                    f"✅ Подходит по фильтру. Ожидаем покупку..."
-                                ),
-                                parse_mode="HTML"
-                            )
-                        except Exception as e:
-                            logger.error(f"❌ Ошибка при отправке уведомления: {e}")
+                    try:
+                        await bot.send_photo(
+                            chat_id=user_id,
+                            photo=g_dict.get("photo_url"),
+                            caption=(
+                                f"🎁 <b>{g_dict.get('name', 'Подарок')}</b>\n"
+                                f"💰 Цена: <b>{price} TON</b>\n\n"
+                                f"✅ Подходит по фильтру. Ожидаем покупку..."
+                            ),
+                            parse_mode="HTML"
+                        )
+                    except Exception as e:
+                        logger.error(f"❌ Ошибка при отправке уведомления: {e}")
+
+                    # 🧠 Отправка на второй проект
+                    g_dict["user_id"] = user_id
+                    g_dict["filter_id"] = filter_id
+                    g_dict["status"] = "✅ Подходит по фильтру"
+                    send_json_to_socket(g_dict)
+
                 else:
                     logger.debug(f"🔁 Подарок уже был найден: {gift_id}")
-
-                g_dict["status"] = "✅ Подходит по фильтру"
+                    g_dict["status"] = "✅ Подходит по фильтру"
             else:
                 g_dict["status"] = f"❌ Дорогой: {price} TON > {price_limit} TON"
 
