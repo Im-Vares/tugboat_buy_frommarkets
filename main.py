@@ -50,7 +50,8 @@ async def preload_some_collections(limit: int = 4):
             logger.info(f"➡️ Кэшируем модели коллекции: {short_name}")
             filters = await filterFloors(gift_name=short_name, authData=auth)
             if filters:
-                cache_models_for_collection(auth, short_name, filters.models)
+                models = filters.models
+                cache_models_for_collection(short_name, models)
             else:
                 logger.warning(f"⚠️ Не удалось получить модели для: {short_name}")
 

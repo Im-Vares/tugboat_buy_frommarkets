@@ -52,7 +52,7 @@ def cache_backdrops(backdrops: dict):
     with path.open("w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 # Function to cache models for a collection
-def cache_models_for_collection(auth_data, collection: str, models: dict):
+def cache_models_for_collection(collection: str, models: dict):
     path = Path("shared/gift_cache.json")
     if path.exists():
         with path.open("r", encoding="utf-8") as f:
