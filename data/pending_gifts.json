@@ -1,0 +1,70 @@
+[
+  {
+    "id": "3e55c7ff-aed6-48a2-ae32-2d01b9c8874f",
+    "tg_id": "",
+    "collection_id": "1a139fcf-5850-48c3-aee6-924134ad17d8",
+    "external_collection_number": 68953,
+    "name": "Jelly Bunny",
+    "photo_url": "https://nft.fragment.com/gift/jellybunny-68953.large.jpg",
+    "price": "2.77",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Snail Gel",
+        "rarity_per_mille": 1.5
+      },
+      {
+        "type": "symbol",
+        "value": "Spades",
+        "rarity_per_mille": 0.5
+      },
+      {
+        "type": "backdrop",
+        "value": "Indigo Dye",
+        "rarity_per_mille": 2
+      }
+    ],
+    "listed_at": "2025-08-03T22:29:00.895008Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/jellybunny-68953.lottie.json",
+    "emoji_id": "5429427991786578506",
+    "has_animation": true,
+    "floor_price": "2.74",
+    "unlocks_at": "2025-06-10T10:46:58Z",
+    "is_owned": false
+  },
+  {
+    "id": "0f75dd90-d06a-41cc-a661-ab2b7e84b823",
+    "tg_id": "",
+    "collection_id": "8d21b568-63bb-437a-9093-8684c5b63485",
+    "external_collection_number": 2542,
+    "name": "Plush Pepe",
+    "photo_url": "https://nft.fragment.com/gift/plushpepe-2542.large.jpg",
+    "price": "3390",
+    "attributes": [
+      {
+        "type": "model",
+        "value": "Eggplant",
+        "rarity_per_mille": 3
+      },
+      {
+        "type": "symbol",
+        "value": "Clubs",
+        "rarity_per_mille": 0.3
+      },
+      {
+        "type": "backdrop",
+        "value": "Hunter Green",
+        "rarity_per_mille": 1.5
+      }
+    ],
+    "listed_at": "2025-08-07T21:04:32.005864Z",
+    "status": "✅ Подходит по фильтру",
+    "animation_url": "https://nft.fragment.com/gift/plushpepe-2542.lottie.json",
+    "emoji_id": "5422347441846381240",
+    "has_animation": true,
+    "floor_price": "3390",
+    "unlocks_at": "2025-01-24T18:54:54Z",
+    "is_owned": false
+  }
+]

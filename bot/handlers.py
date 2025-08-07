@@ -7,6 +7,18 @@ from shared.gift_cache import get_cached_collections, get_cached_backdrops, get_
 import json
 from pathlib import Path
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from bot.services.search_starter import start_search_for_filter
+
+# --- Реализация get_cached_auth (вместо импорта из bot.utils) ---
+from bot.states.aportals_fetcher import get_auth_data
+
+_cached_auth_data = None
+
+async def get_cached_auth():
+    global _cached_auth_data
+    if _cached_auth_data is None:
+        _cached_auth_data = await get_auth_data()
+    return _cached_auth_data
 
 router = Router()
 
@@ -117,20 +129,23 @@ async def delete_filter(callback: types.CallbackQuery):
 
 async def send_collections(message: types.Message):
     cached = get_cached_collections()
-    kb = InlineKeyboardMarkup(inline_keyboard=[
+    keyboard = [
         [InlineKeyboardButton(text=name, callback_data=f"coll:{name}")]
         for name in cached
-    ])
-    kb.inline_keyboard.append([
+    ]
+    keyboard.append([
         InlineKeyboardButton(text="⬅ Назад", callback_data="start_menu"),
         InlineKeyboardButton(text="➡ Далее", callback_data="to_models")
     ])
+    kb = InlineKeyboardMarkup(inline_keyboard=keyboard)
     await message.edit_text("Выберите коллекцию:", reply_markup=kb)
 
 @router.callback_query(F.data.startswith("coll:"))
 async def choose_collection(callback: types.CallbackQuery, state: FSMContext):
     collection = callback.data.split(":")[1]
     await state.update_data(collection=collection, models=[], backdrops=[], price=None)
+    await state.update_data(models_page=0)
+    await state.update_data(backdrops_page=0)
     models = list(get_cached_models_for_collection(collection).keys())
     await state.set_state(FilterCreation.choosing_models)
     await send_models(callback.message, state, models)
@@ -138,10 +153,26 @@ async def choose_collection(callback: types.CallbackQuery, state: FSMContext):
 async def send_models(message: types.Message, state: FSMContext, model_list: list[str]):
     data = await state.get_data()
     selected = data.get("models", [])
+    page = data.get("models_page", 0)
+    per_page = 90
+    total_pages = (len(model_list) + per_page - 1) // per_page
+    start = page * per_page
+    end = start + per_page
+    paged_models = model_list[start:end]
+
     keyboard = []
     # Добавляем кнопку "Выбрать все"
     keyboard.append([InlineKeyboardButton(text="✅ Выбрать все модели", callback_data="select_all_models")])
-    for model in model_list:
+
+    nav_buttons = []
+    if page > 0:
+        nav_buttons.append(InlineKeyboardButton(text="⬅️ Назад по списку", callback_data="models_prev"))
+    if page < total_pages - 1:
+        nav_buttons.append(InlineKeyboardButton(text="➡️ Далее по списку", callback_data="models_next"))
+    if nav_buttons:
+        keyboard.append(nav_buttons)
+
+    for model in paged_models:
         mark = "✅" if model in selected else ""
         keyboard.append([InlineKeyboardButton(
             text=f"{mark} {model}", callback_data=f"model:{model}"
@@ -150,6 +181,11 @@ async def send_models(message: types.Message, state: FSMContext, model_list: lis
         InlineKeyboardButton(text="⬅ Назад", callback_data="to_collections"),
         InlineKeyboardButton(text="➡ Далее", callback_data="to_backdrops")
     ])
+    if len(keyboard) <= 1:
+        keyboard.append([
+            InlineKeyboardButton(text="⬅ Назад", callback_data="to_collections"),
+            InlineKeyboardButton(text="➡ Далее", callback_data="to_backdrops")
+        ])
     await message.edit_text("Выберите модель/модели:", reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
 
 @router.callback_query(F.data.startswith("model:"))
@@ -179,10 +215,26 @@ async def send_backdrops(message: types.Message, state: FSMContext):
     data = await state.get_data()
     selected = data.get("backdrops", [])
     all_backdrops = get_cached_backdrops()
+    page = data.get("backdrops_page", 0)
+    per_page = 90
+    total_pages = (len(all_backdrops) + per_page - 1) // per_page
+    start = page * per_page
+    end = start + per_page
+    paged_backdrops = all_backdrops[start:end]
+
     keyboard = []
     # Добавляем кнопку "Выбрать все"
     keyboard.append([InlineKeyboardButton(text="✅ Выбрать все фоны", callback_data="select_all_backdrops")])
-    for backdrop in all_backdrops:
+
+    nav_buttons = []
+    if page > 0:
+        nav_buttons.append(InlineKeyboardButton(text="⬅️ Назад по списку", callback_data="backdrops_prev"))
+    if page < total_pages - 1:
+        nav_buttons.append(InlineKeyboardButton(text="➡️ Далее по списку", callback_data="backdrops_next"))
+    if nav_buttons:
+        keyboard.append(nav_buttons)
+
+    for backdrop in paged_backdrops:
         mark = "✅" if backdrop in selected else ""
         keyboard.append([InlineKeyboardButton(
             text=f"{mark} {backdrop}", callback_data=f"backdrop:{backdrop}"
@@ -191,6 +243,11 @@ async def send_backdrops(message: types.Message, state: FSMContext):
         InlineKeyboardButton(text="⬅ Назад", callback_data="to_models"),
         InlineKeyboardButton(text="➡ Далее", callback_data="to_price")
     ])
+    if len(paged_backdrops) == 0:
+        keyboard.append([
+            InlineKeyboardButton(text="⬅ Назад", callback_data="to_models"),
+            InlineKeyboardButton(text="➡ Далее", callback_data="to_price")
+        ])
     await message.edit_text("Выберите фон/фоны:", reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
 
 @router.callback_query(F.data.startswith("backdrop:"))
@@ -209,6 +266,8 @@ async def toggle_backdrop(callback: types.CallbackQuery, state: FSMContext):
 async def to_models(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     collection = data.get("collection")
+    await state.update_data(models_page=0)
+    await state.update_data(backdrops_page=0)
     models = list(get_cached_models_for_collection(collection).keys())
     await state.set_state(FilterCreation.choosing_models)
     await send_models(callback.message, state, models)
@@ -237,6 +296,8 @@ async def set_price(message: types.Message, state: FSMContext):
     filters.append(data)
     with filters_path.open("w", encoding="utf-8") as f:
         json.dump(filters, f, ensure_ascii=False, indent=2)
+    auth = await get_cached_auth()
+    asyncio.create_task(start_search_for_filter(data, auth))
     await message.answer("✅ Фильтр сохранён!")
     await state.clear()
 
@@ -265,3 +326,33 @@ async def return_to_start(callback: types.CallbackQuery):
         [InlineKeyboardButton(text="🗑 Удалить фильтр", callback_data="delete_filter")]
     ])
     await callback.message.edit_text("Привет! Выбери действие:", reply_markup=kb)
+
+@router.callback_query(F.data == "models_next")
+async def next_models_page(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    page = data.get("models_page", 0)
+    await state.update_data(models_page=page + 1)
+    models = list(get_cached_models_for_collection(data.get("collection")).keys())
+    await send_models(callback.message, state, models)
+
+@router.callback_query(F.data == "models_prev")
+async def prev_models_page(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    page = data.get("models_page", 0)
+    await state.update_data(models_page=max(page - 1, 0))
+    models = list(get_cached_models_for_collection(data.get("collection")).keys())
+    await send_models(callback.message, state, models)
+
+@router.callback_query(F.data == "backdrops_next")
+async def next_backdrops_page(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    page = data.get("backdrops_page", 0)
+    await state.update_data(backdrops_page=page + 1)
+    await send_backdrops(callback.message, state)
+
+@router.callback_query(F.data == "backdrops_prev")
+async def prev_backdrops_page(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    page = data.get("backdrops_page", 0)
+    await state.update_data(backdrops_page=max(page - 1, 0))
+    await send_backdrops(callback.message, state)

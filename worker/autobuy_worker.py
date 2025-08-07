@@ -15,14 +15,7 @@ async def autobuy_loop():
 
         for f in filters:
             try:
-                await search_gifts_by_filter(
-                    collection=f['collection'],
-                    model=f['model'],
-                    backdrop=f['backdrop'],
-                    price_limit=f['price_limit'],
-                    filter_id=f['id'],
-                    user_id=f['user_id']
-                )
+                await search_gifts_by_filter(f)
             except Exception as e:
                 logger.error(f"❌ Ошибка при обработке фильтра {f['id']}: {e}")
 

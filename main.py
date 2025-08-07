@@ -19,6 +19,11 @@ from shared.gift_cache import (
 
 load_dotenv()
 
+from bot.services.search_starter import start_search_for_all_filters
+
+# Путь к файлу с фильтрами
+FILTER_FILE_PATH = os.path.join("data", "filters.json")
+
 
 async def preload_backdrops_once():
     logger.info("📦 Проверка кэша фонов...")
@@ -63,6 +68,11 @@ async def preload_some_collections(limit: int = 4):
 async def runner():
     await preload_backdrops_once()
     await preload_some_collections(limit=4)
+
+    if not os.path.exists(FILTER_FILE_PATH):
+        logger.warning(f"⚠️ Файл фильтров не найден: {FILTER_FILE_PATH}")
+    else:
+        await start_search_for_all_filters()
 
     pyrogram_client = get_pyrogram_client()
     await pyrogram_client.start()

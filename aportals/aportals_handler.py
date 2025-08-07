@@ -6,7 +6,12 @@ from config import API_ID, API_HASH
 from aportalsmp.auth import update_auth
 from aportalsmp.account import myBalances
 
+
 auth_data: str | None = None  # Глобальный токен
+
+# Функция для получения текущего значения auth_data
+def get_auth_data() -> str | None:
+    return auth_data
 
 async def init_aportals():
     global auth_data

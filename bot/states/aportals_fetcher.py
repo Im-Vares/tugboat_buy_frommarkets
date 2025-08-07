@@ -10,12 +10,19 @@ from config import API_ID, API_HASH, SESSION_NAME
 CACHE_PATH = Path("data/gift_cache.json")
 CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+_auth_cache = None  # 🔐 Кэш авторизационных данных
+
 # === Авторизация с retry ===
 async def get_auth_data(retries: int = 3, delay: int = 5):
+    global _auth_cache
+    if _auth_cache:
+        return _auth_cache
+
     for attempt in range(retries):
         try:
             logger.info(f"🔒 Авторизация {attempt + 1}/{retries}")
-            return await update_auth(api_id=API_ID, api_hash=API_HASH, session_name=SESSION_NAME)
+            _auth_cache = await update_auth(api_id=API_ID, api_hash=API_HASH, session_name=SESSION_NAME)
+            return _auth_cache
         except Exception as e:
             logger.warning(f"❌ Ошибка авторизации (попытка {attempt + 1}): {e}")
             if attempt < retries - 1:
