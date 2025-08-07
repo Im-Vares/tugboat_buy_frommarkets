@@ -1,0 +1,26 @@
+[
+  {
+    "collection": "plushpepe",
+    "models": [
+      "Red Menace",
+      "Barcelona",
+      "Midas Pepe",
+      "Emerald Plush",
+      "Pink Galaxy"
+    ],
+    "backdrops": [
+      "Battleship Grey",
+      "Emerald",
+      "Light Olive",
+      "Chestnut",
+      "Burgundy",
+      "Ivory White",
+      "Dark Lilac",
+      "French Blue",
+      "Indigo Dye",
+      "Persimmon",
+      "Strawberry"
+    ],
+    "price": 30000.0
+  }
+]

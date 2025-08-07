@@ -1,20 +1,18 @@
-# aportals/search_logic.py
-
 from pathlib import Path
 import json
-import re
 from aportalsmp.gifts import search
 from aportalsmp.auth import update_auth
-from db.pending_gift_service import save_pending_gift, is_gift_already_pending
-from db.db import get_db
 from loguru import logger
 from config import API_ID, API_HASH, SESSION_NAME, BOT_TOKEN
 from shared.utils import get_filter_filename, send_json_to_socket
 from aiogram import Bot
 
+# Путь к JSON с найденными подарками и фильтрами
+FILTERS_JSON_PATH = Path("filters.json")
+PENDING_GIFTS_DIR = Path("data")
+
 authData = None
 bot = Bot(token=BOT_TOKEN)
-
 
 async def init_aportals():
     global authData
@@ -30,6 +28,15 @@ async def init_aportals():
         logger.error(f"❌ Ошибка авторизации: {e}")
         authData = None
 
+def _load_pending_json(filepath: Path) -> list:
+    if filepath.exists():
+        with open(filepath, encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def _save_pending_json(filepath: Path, data: list):
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 async def search_gifts_by_filter(collection: str, model: str, backdrop: str, price_limit: float, filter_id: int, user_id: int):
     if not authData:
@@ -51,65 +58,53 @@ async def search_gifts_by_filter(collection: str, model: str, backdrop: str, pri
         return []
 
     result = []
+    filter_filename = get_filter_filename(collection, model, backdrop, price_limit)
+    pending_path = PENDING_GIFTS_DIR / filter_filename
+    Path("data").mkdir(parents=True, exist_ok=True)
 
-    async for session in get_db():
-        for g in gifts:
-            price = g.price
-            if price is None:
-                continue
+    pending_list = _load_pending_json(pending_path)
+    pending_ids = {g.get("id") or g.get("nft_id") for g in pending_list}
 
-            gift_id = g.id or getattr(g, "nft_id", None)
-            if not gift_id:
-                continue
+    for g in gifts:
+        price = g.price
+        gift_id = g.id or getattr(g, "nft_id", None)
+        if not gift_id or price is None:
+            continue
 
-            g_dict = g.__dict__.copy()
+        g_dict = g.__dict__.copy()
+        g_dict["user_id"] = user_id
+        g_dict["filter_id"] = filter_id
 
-            if price <= price_limit:
-                already_saved = await is_gift_already_pending(session, filter_id, gift_id)
-                if not already_saved:
-                    logger.success(f"🎁 Новый подходящий подарок: {g.name} за {price} TON")
-                    await save_pending_gift(session, filter_id, g_dict)
+        if price <= price_limit:
+            if gift_id not in pending_ids:
+                logger.success(f"🎁 Новый подходящий подарок: {g.name} за {price} TON")
+                g_dict["status"] = "✅ Подходит по фильтру"
+                pending_list.append(g_dict)
 
-                    # 📤 Уведомление в Telegram
-                    try:
-                        await bot.send_photo(
-                            chat_id=user_id,
-                            photo=g_dict.get("photo_url"),
-                            caption=(
-                                f"🎁 <b>{g_dict.get('name', 'Подарок')}</b>\n"
-                                f"💰 Цена: <b>{price} TON</b>\n\n"
-                                f"✅ Подходит по фильтру. Ожидаем покупку..."
-                            ),
-                            parse_mode="HTML"
-                        )
-                    except Exception as e:
-                        logger.error(f"❌ Ошибка при отправке уведомления: {e}")
+                # 📤 Уведомление в Telegram
+                try:
+                    await bot.send_photo(
+                        chat_id=user_id,
+                        photo=g_dict.get("photo_url"),
+                        caption=(
+                            f"🎁 <b>{g_dict.get('name', 'Подарок')}</b>\n"
+                            f"💰 Цена: <b>{price} TON</b>\n\n"
+                            f"✅ Подходит по фильтру. Ожидаем покупку..."
+                        ),
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Ошибка при отправке уведомления: {e}")
 
-                    # 🧠 Отправка на второй проект
-                    g_dict["user_id"] = user_id
-                    g_dict["filter_id"] = filter_id
-                    g_dict["status"] = "✅ Подходит по фильтру"
-                    send_json_to_socket(g_dict)
-
-                else:
-                    logger.debug(f"🔁 Подарок уже был найден: {gift_id}")
-                    g_dict["status"] = "✅ Подходит по фильтру"
+                send_json_to_socket(g_dict)
             else:
-                g_dict["status"] = f"❌ Дорогой: {price} TON > {price_limit} TON"
+                logger.debug(f"🔁 Подарок уже был найден: {gift_id}")
+        else:
+            g_dict["status"] = f"❌ Дорогой: {price} TON > {price_limit} TON"
 
-            result.append(g_dict)
+        result.append(g_dict)
 
-    # 💾 Сохраняем в уникальный файл
-    try:
-        Path("data").mkdir(parents=True, exist_ok=True)
-        filename = get_filter_filename(collection, model, backdrop, price_limit)
-        output_path = Path("data") / filename
-
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
-
-        logger.info(f"📦 Сохранили подарки фильтра в {output_path}")
-    except Exception as e:
-        logger.error(f"❌ Ошибка при сохранении JSON-файла: {e}")
+    _save_pending_json(pending_path, pending_list)
+    logger.info(f"📦 Сохранили подарки фильтра в {pending_path}")
 
     return result

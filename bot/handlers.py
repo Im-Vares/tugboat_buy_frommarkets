@@ -1,114 +1,148 @@
-from aiogram import Router, types, F
-from aiogram.filters import Command
+import asyncio
+from aiogram import Router, F, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from db.db import get_db
-from db.filters_service import save_filter, get_filters, delete_filter
-from bot.messages import GREETING_MESSAGE
-from loguru import logger
+from aiogram.fsm.state import StatesGroup, State
+from shared.gift_cache import get_cached_collections, get_cached_backdrops, get_cached_models_for_collection
+import json
+from pathlib import Path
 
 router = Router()
 
-# FSM: создание фильтра
-class FilterForm(StatesGroup):
-    collection = State()
-    model = State()
-    backdrop = State()
-    price_limit = State()
+class FilterCreation(StatesGroup):
+    choosing_collection = State()
+    choosing_models = State()
+    choosing_backdrops = State()
+    entering_price = State()
 
+@router.message(F.text == "/start")
+async def start_cmd(message: types.Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Создать фильтр", callback_data="create_filter")],
+        [InlineKeyboardButton(text="👁 Посмотреть фильтры", callback_data="view_filters")],
+        [InlineKeyboardButton(text="🗑 Удалить фильтр", callback_data="delete_filter")]
+    ])
+    await message.answer("Привет! Выбери действие:", reply_markup=kb)
 
-@router.message(Command("start"))
-async def cmd_start(message: types.Message):
-    await message.answer(GREETING_MESSAGE)
+@router.callback_query(F.data == "create_filter")
+async def create_filter_start(callback: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    await state.set_state(FilterCreation.choosing_collection)
+    await send_collections(callback.message)
 
+async def send_collections(message: types.Message):
+    cached = get_cached_collections()
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=name, callback_data=f"coll:{name}")]
+        for name in cached
+    ])
+    await message.answer("Выберите коллекцию:", reply_markup=kb)
 
-@router.message(Command("filters"))
-async def cmd_filters(message: types.Message):
-    async for session in get_db():
-        filters = await get_filters(session, user_id=message.from_user.id)
-        if not filters:
-            await message.answer("❌ У тебя пока нет фильтров.")
-            return
-        text = "\n\n".join([
-            f"🆔 {f.id} | 🎁 <b>{f.collection}</b>\n🎭 {f.model}, 🌄 {f.backdrop}, 💰 до {f.price_limit} TON"
-            for f in filters
-        ])
-        await message.answer(f"📦 <b>Твои фильтры:</b>\n\n{text}", parse_mode="HTML")
+@router.callback_query(F.data.startswith("coll:"))
+async def choose_collection(callback: types.CallbackQuery, state: FSMContext):
+    collection = callback.data.split(":")[1]
+    await state.update_data(collection=collection, models=[], backdrops=[], price=None)
+    models = list(get_cached_models_for_collection(collection).keys())
+    await state.set_state(FilterCreation.choosing_models)
+    await send_models(callback.message, state, models)
 
-
-@router.message(Command("add_filter"))
-async def cmd_add_filter(message: types.Message, state: FSMContext):
-    await message.answer("🧩 Введи название коллекции (collection):")
-    await state.set_state(FilterForm.collection)
-
-
-@router.message(FilterForm.collection)
-async def fsm_collection(message: types.Message, state: FSMContext):
-    await state.update_data(collection=message.text.strip())
-    await message.answer("🎭 Введи модель (model):")
-    await state.set_state(FilterForm.model)
-
-
-@router.message(FilterForm.model)
-async def fsm_model(message: types.Message, state: FSMContext):
-    await state.update_data(model=message.text.strip())
-    await message.answer("🌅 Введи фон (backdrop):")
-    await state.set_state(FilterForm.backdrop)
-
-
-@router.message(FilterForm.backdrop)
-async def fsm_backdrop(message: types.Message, state: FSMContext):
-    await state.update_data(backdrop=message.text.strip())
-    await message.answer("💸 Введи максимальную цену (TON):")
-    await state.set_state(FilterForm.price_limit)
-
-
-@router.message(FilterForm.price_limit)
-async def fsm_price(message: types.Message, state: FSMContext):
-    try:
-        price = float(message.text.strip())
-    except ValueError:
-        await message.answer("❌ Неверный формат. Введи число.")
-        return
-
-    await state.update_data(price_limit=price)
+async def send_models(message: types.Message, state: FSMContext, model_list: list[str]):
     data = await state.get_data()
+    selected = data.get("models", [])
+    keyboard = []
+    for model in model_list:
+        mark = "✅" if model in selected else ""
+        keyboard.append([InlineKeyboardButton(
+            text=f"{mark} {model}", callback_data=f"model:{model}"
+        )])
+    keyboard.append([
+        InlineKeyboardButton(text="⬅ Назад", callback_data="to_collections"),
+        InlineKeyboardButton(text="➡ Далее", callback_data="to_backdrops")
+    ])
+    await message.answer("Выберите модель/модели:", reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
 
-    async for session in get_db():
-        new_filter = await save_filter(session, {
-            "collection": data["collection"],
-            "model": data["model"],
-            "backdrop": data["backdrop"],
-            "symbol": None,
-            "price_limit": data["price_limit"]
-        }, user_id=message.from_user.id)
-
-    await message.answer(f"✅ Фильтр сохранён с ID: {new_filter.id}")
-    await state.clear()
-
-
-@router.message(Command("delete_filter"))
-async def cmd_delete_filter(message: types.Message, state: FSMContext):
-    await message.answer("🗑 Введи ID фильтра, который хочешь удалить:")
-    await state.set_state("awaiting_filter_id")
-
-
-@router.message(F.text.regexp(r"^\d+$"))
-async def handle_filter_id_input(message: types.Message, state: FSMContext):
-    state_name = await state.get_state()
-    if state_name != "awaiting_filter_id":
-        return  # Не в том состоянии — игнорим
-
-    filter_id = int(message.text.strip())
-    async for session in get_db():
-        success = await delete_filter(session, filter_id, user_id=message.from_user.id)
-
-    if success:
-        await message.answer(f"✅ Фильтр {filter_id} удалён.")
+@router.callback_query(F.data.startswith("model:"))
+async def toggle_model(callback: types.CallbackQuery, state: FSMContext):
+    model = callback.data.split(":")[1]
+    data = await state.get_data()
+    selected = set(data.get("models", []))
+    if model in selected:
+        selected.remove(model)
     else:
-        await message.answer(f"❌ Не найден фильтр с ID: {filter_id}")
+        selected.add(model)
+    await state.update_data(models=list(selected))
+    models = list(get_cached_models_for_collection(data.get("collection")).keys())
+    await send_models(callback.message, state, models)
+
+@router.callback_query(F.data == "to_collections")
+async def back_to_collections(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(FilterCreation.choosing_collection)
+    await send_collections(callback.message)
+
+@router.callback_query(F.data == "to_backdrops")
+async def to_backdrops(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(FilterCreation.choosing_backdrops)
+    await send_backdrops(callback.message, state)
+
+async def send_backdrops(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    selected = data.get("backdrops", [])
+    all_backdrops = get_cached_backdrops()
+    keyboard = []
+    for backdrop in all_backdrops:
+        mark = "✅" if backdrop in selected else ""
+        keyboard.append([InlineKeyboardButton(
+            text=f"{mark} {backdrop}", callback_data=f"backdrop:{backdrop}"
+        )])
+    keyboard.append([
+        InlineKeyboardButton(text="⬅ Назад", callback_data="to_models"),
+        InlineKeyboardButton(text="➡ Далее", callback_data="to_price")
+    ])
+    await message.answer("Выберите фон/фоны:", reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
+
+@router.callback_query(F.data.startswith("backdrop:"))
+async def toggle_backdrop(callback: types.CallbackQuery, state: FSMContext):
+    backdrop = callback.data.split(":")[1]
+    data = await state.get_data()
+    selected = set(data.get("backdrops", []))
+    if backdrop in selected:
+        selected.remove(backdrop)
+    else:
+        selected.add(backdrop)
+    await state.update_data(backdrops=list(selected))
+    await send_backdrops(callback.message, state)
+
+@router.callback_query(F.data == "to_models")
+async def to_models(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    collection = data.get("collection")
+    models = list(get_cached_models_for_collection(collection).keys())
+    await state.set_state(FilterCreation.choosing_models)
+    await send_models(callback.message, state, models)
+
+@router.callback_query(F.data == "to_price")
+async def to_price(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(FilterCreation.entering_price)
+    await callback.message.answer("Введите максимальную цену:")
+
+@router.message(FilterCreation.entering_price)
+async def set_price(message: types.Message, state: FSMContext):
+    try:
+        price = float(message.text)
+    except ValueError:
+        await message.answer("Введите корректное число!")
+        return
+    data = await state.get_data()
+    data["price"] = price
+    filters_path = Path("data/filters.json")
+    filters_path.parent.mkdir(exist_ok=True)
+    if filters_path.exists():
+        with filters_path.open("r", encoding="utf-8") as f:
+            filters = json.load(f)
+    else:
+        filters = []
+    filters.append(data)
+    with filters_path.open("w", encoding="utf-8") as f:
+        json.dump(filters, f, ensure_ascii=False, indent=2)
+    await message.answer("✅ Фильтр сохранён!")
     await state.clear()
-
-
-def register_handlers(dp):
-    dp.include_router(router)

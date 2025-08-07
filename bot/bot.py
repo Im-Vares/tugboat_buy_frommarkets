@@ -5,7 +5,7 @@ from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 
 from config import BOT_TOKEN
-from bot.handlers import register_handlers
+from bot.handlers import router
 
 # 🧠 Правильный способ указать parse_mode в новых версиях aiogram
 bot = Bot(
@@ -16,5 +16,5 @@ bot = Bot(
 dp = Dispatcher()
 
 async def start_bot():
-    register_handlers(dp)
+    dp.include_router(router)
     await dp.start_polling(bot)
