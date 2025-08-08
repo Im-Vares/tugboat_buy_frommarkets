@@ -37,3 +37,5 @@ def register_commands(dp: Dispatcher):
     dp.message.register(cmd_start, Command(commands=["start"]))
     dp.message.register(cmd_balance, Command(commands=["balance"]))
     dp.message.register(cmd_filters, Command(commands=["filters"]))
+
+# /add_filter, /edit_filter, /delete_filter handled in filters_fsm router

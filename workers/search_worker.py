@@ -1,19 +1,36 @@
-import asyncio, json
+import asyncio, json, logging
 from aportals_api.client import search
 from config.config import settings
 from db.db_class import DB
 
 db = DB()
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
 async def _send(writer, payload: dict):
     writer.write((json.dumps(payload) + "\n").encode())
     await writer.drain()
 
+def _norm_list(x):
+    if x is None: return []
+    if isinstance(x, (list, tuple)): return [str(i).lower() for i in x]
+    # if DB returned single string accidentally
+    return [str(x).lower()]
+
 def _fits(g, flt) -> bool:
-    if g.price > float(flt["max_price"]): return False
-    if flt["model"] and (g.model or "").lower() != (flt["model"] or "").lower(): return False
-    if flt["backdrop"] and (g.backdrop or "").lower() != (flt["backdrop"] or "").lower(): return False
-    return True
+    try:
+        if g.price > float(flt["max_price"]):
+            return False
+        models = _norm_list(flt.get("model"))
+        if models and (g.model or "").lower() not in models:
+            return False
+        backs = _norm_list(flt.get("backdrop"))
+        if backs and (g.backdrop or "").lower() not in backs:
+            return False
+        return True
+    except Exception as e:
+        logging.warning("fits failed: %s", e)
+        return False
+
 
 async def run_once():
     _, writer = await asyncio.open_connection(settings.BUY_HOST, settings.BUY_PORT)
@@ -48,6 +65,7 @@ async def run_once():
 
 async def main():
     while True:
+        logging.info('search tick start')
         await run_once()
 
 if __name__ == "__main__":

@@ -1,9 +1,10 @@
-import asyncio, json
+import asyncio, json, logging
 from aportals_api.client import buy, my_balances
 from config.config import settings
 from db.db_class import DB
 
 db = DB()
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
 async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     while not reader.at_eof():
@@ -35,6 +36,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
     await writer.wait_closed()
 
 async def main():
+    logging.info('Buy server starting on %s:%s', settings.BUY_HOST, settings.BUY_PORT)
     server = await asyncio.start_server(handle_client, settings.BUY_HOST, settings.BUY_PORT)
     async with server:
         await server.serve_forever()
