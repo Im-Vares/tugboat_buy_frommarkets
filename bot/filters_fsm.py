@@ -130,27 +130,27 @@ async def add_filter_price(message: Message, state: FSMContext):
 async def add_filter_qty(message: Message, state: FSMContext):
     try:
         qty = int(message.text.strip())
-        if qty <= 0: raise ValueError()
+        if qty <= 0:
+            raise ValueError()
     except Exception:
         return await message.answer("Нужно целое число > 0.")
-    data = await state.update_data(qty=qty)
-    data = await state.get_data()
-    models = ", ".join(sorted(data.get("picked_models", []))) or "любой"
-    backs = ", ".join(sorted(data.get("picked_backs", []))) or "любой"
-    text = (f"Проверим:
-"
-            f"Коллекция: {data['collection']}
-"
-            f"Модели: {models}
-"
-            f"Фоны: {backs}
-"
-            f"Макс. цена: {data['max_price']} TON
-"
-            f"Количество: {qty}
 
-"
-            f"Подтвердить? /save или /cancel")
+    await state.update_data(qty=qty)
+    data = await state.get_data()
+
+    models = ", ".join(sorted(data.get("picked_models", []))) or "любой"
+    backs  = ", ".join(sorted(data.get("picked_backs", []))) or "любой"
+
+    text = (
+        f"Проверим:\n"
+        f"Коллекция: {data['collection']}\n"
+        f"Модели: {models}\n"
+        f"Фоны: {backs}\n"
+        f"Макс. цена: {data['max_price']} TON\n"
+        f"Количество: {qty}\n\n"
+        f"Подтвердить? /save или /cancel"
+    )
+
     await state.set_state(NewFilter.confirm)
     await message.answer(text)
 
