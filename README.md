@@ -26,3 +26,16 @@
 - Находит подходящие лоты → шлёт JSON в `buy_worker` по TCP.
 - `workers/buy_worker.py` проверяет баланс (`aportals_api.client.my_balances`) и покупает (`aportals_api.client.buy`).
 - FSM бота: коллекция → модели → фоны → max_price → qty → подтверждение. Подсказки: `/collections [q]`.\n
+
+
+BOT_TOKEN=
+ALLOWED_USERS=
+TG_API_ID=
+TG_API_HASH=
+SESSION_PATH=./data
+SESSION_NAME=account
+DB_DSN=postgresql://user:pass@localhost:5432/aportals
+SEARCH_INTERVAL=0.2
+SEARCH_LIMIT=50
+BUY_HOST=127.0.0.1
+BUY_PORT=8765
