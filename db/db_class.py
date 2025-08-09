@@ -34,17 +34,17 @@ class DB:
             source, action, kw.get("gift_id"), kw.get("filter_id"),
             kw.get("user_id"), kw.get("price"), result, kw.get("details"),
         )
-async def add_filter(self, user_id: int, collection: str, model, backdrop, max_price: float, quantity: int, active: bool=True) -> int:
-    pool = await get_pool()
-    row = await pool.fetchrow(
-        "INSERT INTO filters(user_id, collection, model, backdrop, max_price, quantity, active) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",
-        user_id, collection, model, backdrop, max_price, quantity, active
-    )
-    return row["id"]
-async def delete_filter(self, fid: int) -> None:
-    pool = await get_pool()
-    await pool.execute("DELETE FROM filters WHERE id=$1", fid)
-async def get_active_filters(self):
-    pool = await get_pool()
-    rows = await pool.fetch("SELECT * FROM filters WHERE active = TRUE ORDER BY id DESC")
-    return [dict(r) for r in rows]
+    async def add_filter(self, user_id: int, collection: str, model, backdrop, max_price: float, quantity: int, active: bool=True) -> int:
+        pool = await get_pool()
+        row = await pool.fetchrow(
+            "INSERT INTO filters(user_id, collection, model, backdrop, max_price, quantity, active) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",
+            user_id, collection, model, backdrop, max_price, quantity, active
+        )
+        return row["id"]
+    async def delete_filter(self, fid: int) -> None:
+        pool = await get_pool()
+        await pool.execute("DELETE FROM filters WHERE id=$1", fid)
+    async def get_active_filters(self):
+        pool = await get_pool()
+        rows = await pool.fetch("SELECT * FROM filters WHERE active = TRUE ORDER BY id DESC")
+        return [dict(r) for r in rows]
