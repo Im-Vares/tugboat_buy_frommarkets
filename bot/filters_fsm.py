@@ -5,6 +5,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import time
+import asyncio
 
 from db.db_class import DB
 from config.config import settings
@@ -14,9 +15,12 @@ from aportalsmp.gifts import collections as gifts_collections, filterFloors as g
 router = Router()
 db = DB()
 
+
 # cache for collections list (10 minutes)
 _COLL_CACHE = {"ts": 0, "names": []}
 _CACHE_TTL = 600
+_FALLBACK_PAGES_LIGHT = 10   # ~1000 позиций
+_FALLBACK_PAGES_DEEP = 40    # ~4000 позиций
 
 
 def _allowed(uid: int) -> bool:
@@ -62,10 +66,10 @@ async def _get_auth():
     )
 
 
-async def _all_collection_names():
-    # use cached list if it's fresh
+async def _all_collection_names(deep: bool = False):
+    # use cached list if it's fresh and not a deep refresh
     now = time.time()
-    if _COLL_CACHE["names"] and (now - _COLL_CACHE["ts"] < _CACHE_TTL):
+    if (not deep) and _COLL_CACHE["names"] and (now - _COLL_CACHE["ts"] < _CACHE_TTL):
         return _COLL_CACHE["names"]
 
     auth = await _get_auth()
@@ -80,30 +84,32 @@ async def _all_collection_names():
                 nm = it.get("name")
                 if nm:
                     names.add(nm)
-        # some builds expose attribute instead of dict
         if not names and hasattr(cols, "collections"):
             for it in getattr(cols, "collections") or []:
                 nm = getattr(it, "name", None) or (it.get("name") if isinstance(it, dict) else None)
                 if nm:
                     names.add(nm)
     except Exception:
-        # ignore and fallback
         pass
 
-    # B) fallback: collect unique names from market listings via search()
+    # B) fallback: collect unique names from market listings via search() with multiple sorts
     if not names:
         LIMIT = 100
-        for page in range(10):  # up to 1000 items
-            try:
-                batch = await gifts_search(sort="price_asc", offset=page*LIMIT, limit=LIMIT, authData=auth)
-            except Exception:
-                break
-            if not batch:
-                break
-            for g in batch:
-                nm = getattr(g, "name", None) or (g.get("name") if isinstance(g, dict) else None)
-                if nm:
-                    names.add(nm)
+        pages = _FALLBACK_PAGES_DEEP if deep else _FALLBACK_PAGES_LIGHT
+        sorts = ("price_asc", "latest", "gift_id_asc", "price_desc")
+        for s in sorts:
+            for page in range(pages):
+                try:
+                    batch = await gifts_search(sort=s, offset=page*LIMIT, limit=LIMIT, authData=auth)
+                except Exception:
+                    break
+                if not batch:
+                    break
+                for g in batch:
+                    nm = getattr(g, "name", None) or (g.get("name") if isinstance(g, dict) else None)
+                    if nm:
+                        names.add(nm)
+                await asyncio.sleep(0.1)  # бережно к API
 
     out = sorted(names)
     _COLL_CACHE.update(ts=now, names=out)
@@ -123,10 +129,12 @@ async def cmd_collections(message: Message):
     if not _allowed(message.from_user.id):
         return await message.answer("Доступ запрещён.")
     parts = message.text.split(maxsplit=1)
-    q = parts[1].strip().lower() if len(parts) > 1 else ""
-    names = await _all_collection_names()
-    if q:
-        names = [n for n in names if q in n.lower()]
+    q = parts[1].strip() if len(parts) > 1 else ""
+    deep = q.lower() in {"all", "refresh", "*", "обновить", "все"}
+    names = await _all_collection_names(deep=deep)
+    if q and not deep:
+        ql = q.lower()
+        names = [n for n in names if ql in n.lower()]
     if not names:
         return await message.answer("Коллекции не найдены.")
     view = "\n".join("• " + n for n in names[:200])
