@@ -4,14 +4,19 @@ from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+import time
 
 from db.db_class import DB
 from config.config import settings
 from aportalsmp.auth import update_auth
-from aportalsmp.gifts import collections as gifts_collections, filterFloors as gifts_filterFloors
+from aportalsmp.gifts import collections as gifts_collections, filterFloors as gifts_filterFloors, search as gifts_search
 
 router = Router()
 db = DB()
+
+# cache for collections list (10 minutes)
+_COLL_CACHE = {"ts": 0, "names": []}
+_CACHE_TTL = 600
 
 
 def _allowed(uid: int) -> bool:
@@ -53,15 +58,56 @@ async def _get_auth():
         api_id=settings.TG_API_ID,
         api_hash=settings.TG_API_HASH,
         session_path=settings.SESSION_PATH,
-        session_name=getattr(settings, "SESSION_NAME", "account"),
+        session_name=settings.SESSION_NAME,
     )
 
 
 async def _all_collection_names():
+    # use cached list if it's fresh
+    now = time.time()
+    if _COLL_CACHE["names"] and (now - _COLL_CACHE["ts"] < _CACHE_TTL):
+        return _COLL_CACHE["names"]
+
     auth = await _get_auth()
-    cols = await gifts_collections(limit=1000, authData=auth)
-    d = cols.toDict() if hasattr(cols, "toDict") else {}
-    return sorted({c.get("name", "") for c in d.get("collections", []) if isinstance(c, dict) and c.get("name")})
+    names = set()
+
+    # A) try official endpoint first
+    try:
+        cols = await gifts_collections(limit=1000, authData=auth)
+        d = cols.toDict() if hasattr(cols, "toDict") else {}
+        for it in (d.get("collections") or []):
+            if isinstance(it, dict):
+                nm = it.get("name")
+                if nm:
+                    names.add(nm)
+        # some builds expose attribute instead of dict
+        if not names and hasattr(cols, "collections"):
+            for it in getattr(cols, "collections") or []:
+                nm = getattr(it, "name", None) or (it.get("name") if isinstance(it, dict) else None)
+                if nm:
+                    names.add(nm)
+    except Exception:
+        # ignore and fallback
+        pass
+
+    # B) fallback: collect unique names from market listings via search()
+    if not names:
+        LIMIT = 100
+        for page in range(10):  # up to 1000 items
+            try:
+                batch = await gifts_search(sort="price_asc", offset=page*LIMIT, limit=LIMIT, authData=auth)
+            except Exception:
+                break
+            if not batch:
+                break
+            for g in batch:
+                nm = getattr(g, "name", None) or (g.get("name") if isinstance(g, dict) else None)
+                if nm:
+                    names.add(nm)
+
+    out = sorted(names)
+    _COLL_CACHE.update(ts=now, names=out)
+    return out
 
 
 async def _models_backs(name: str):
