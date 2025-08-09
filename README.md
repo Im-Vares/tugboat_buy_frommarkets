@@ -21,31 +21,8 @@
     - `python -m workers.buy_worker`
     - `python -m workers.search_worker`
     - (опционально) `python -m bot.bot`
-
-
-## Обновление до мультивыборных фильтров (модели/фоны — массивы)
-
-### Миграция БД
-Разово выполнить:
-```sql
-\i db/migrations/2025-08-08_model_backdrop_arrays.sql
-```
-
-### Поиск/Покупка
-`workers/search_worker.py` теперь поддерживает множественный выбор `model/backdrop` (TEXT[]). Пустые списки означают "любой".
-
-### Логи старта
-Бот и воркеры пишут логи при старте (stdout) и строку в таблицу `logs`.
-
-### Деплой одной командой
-Создайте локально `deploy.sh` и выполните:
-```bash
-bash deploy.sh
-```
-Пример `deploy.sh`:
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-ssh ubuntu@VM1 'cd ~/aportals_project && git pull --rebase && . .venv/bin/activate && pip install -r requirements.txt && sudo systemctl restart aportals-buy'
-ssh ubuntu@VM2 'cd ~/aportals_project && git pull --rebase && . .venv/bin/activate && pip install -r requirements.txt && sudo systemctl restart aportals-search && sudo systemctl restart aportals-bot'
-```
+\n\n## Runtime (Portals, no markets layer)
+- `workers/search_worker.py` опрашивает Portals каждые `SEARCH_INTERVAL` сек (0.2 по умолчанию) через `aportals_api.client.search`.
+- Находит подходящие лоты → шлёт JSON в `buy_worker` по TCP.
+- `workers/buy_worker.py` проверяет баланс (`aportals_api.client.my_balances`) и покупает (`aportals_api.client.buy`).
+- FSM бота: коллекция → модели → фоны → max_price → qty → подтверждение. Подсказки: `/collections [q]`.\n

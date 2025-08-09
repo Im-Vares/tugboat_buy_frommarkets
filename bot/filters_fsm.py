@@ -1,13 +1,13 @@
-
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 from db.db_class import DB
 from config.config import settings
-from aportals_api.client import filter_floors
+from aportals_api.client import collections as api_collections, filter_floors
 
 router = Router()
 db = DB()
@@ -23,100 +23,146 @@ class NewFilter(StatesGroup):
     qty = State()
     confirm = State()
 
-class EditFilter(NewFilter):
-    fid = State()
+def make_toggle_keyboard(items, picked, prefix: str, page: int = 0, page_size: int = 24):
+    items = list(items or [])
+    picked = set(picked or [])
+    total = len(items)
+    start = page * page_size
+    end = min(total, start + page_size)
+    kb = InlineKeyboardBuilder()
+    for it in items[start:end]:
+        mark = "✅" if it in picked else "•"
+        kb.button(text=f"{mark} {it}", callback_data=f"pick_{prefix}:{it}")
+    if start > 0:
+        kb.button(text="◀️", callback_data=f"{prefix}_page:{page-1}")
+    kb.button(text="Пропустить", callback_data=f"{prefix}_skip")
+    kb.button(text="Продолжить ▶", callback_data=f"{prefix}_next")
+    if end < total:
+        kb.button(text="▶️", callback_data=f"{prefix}_page:{page+1}")
+    kb.adjust(3)
+    return kb.as_markup()
 
-async def _cancel_if_not_allowed(message: Message):
+async def _all_collection_names():
+    cols = await api_collections()
+    d = cols.toDict() if hasattr(cols, "toDict") else {}
+    return sorted([c.get("name","") for c in d.get("collections", []) if c.get("name")])
+
+async def _models_backs(name: str):
+    floors = await filter_floors(name)
+    models = sorted((getattr(floors, "models", {}) or {}).keys())
+    backs = sorted((getattr(floors, "backdrops", {}) or {}).keys())
+    return models, backs
+
+@router.message(Command("collections"))
+async def cmd_collections(message: Message):
     if not _allowed(message.from_user.id):
-        await message.answer("Доступ запрещён.")
-        return True
-    return False
+        return await message.answer("Доступ запрещён.")
+    parts = message.text.split(maxsplit=1)
+    q = parts[1].strip().lower() if len(parts) > 1 else ""
+    names = await _all_collection_names()
+    if q:
+        names = [n for n in names if q in n.lower()]
+    if not names:
+        return await message.answer("Коллекции не найдены.")
+    view = "\n".join("• " + n for n in names[:200])
+    more = "" if len(names) <= 200 else f"\n… и ещё {len(names)-200}"
+    await message.answer("Коллекции (Portals):\n" + view + more)
 
 @router.message(Command("add_filter"))
 async def add_filter_start(message: Message, state: FSMContext):
-    if await _cancel_if_not_allowed(message): return
+    if not _allowed(message.from_user.id):
+        return await message.answer("Доступ запрещён.")
     await state.clear()
     await state.set_state(NewFilter.collection)
-    await message.answer("Введи название коллекции (как на Fragment).")
+    await message.answer("Введи точное название коллекции (Portals). Подсказки: /collections <текст>")
 
 @router.message(NewFilter.collection)
-async def add_filter_collection(message: Message, state: FSMContext):
-    name = message.text.strip()
-    # Можно валидировать через filter_floors
-    try:
-        floors = await filter_floors(gift_name=name)
-        models = sorted({m["value"] for m in floors.get("models", [])})
-        backs = sorted({b["value"] for b in floors.get("backdrops", [])})
-    except Exception:
-        models, backs = [], []
-    await state.update_data(collection=name, models_choices=models, backs_choices=backs, picked_models=set(), picked_backs=set())
-    # Кнопка: продолжить/пропустить если нет вариантов
-    if models:
-        kb = InlineKeyboardBuilder()
-        for m in models[:48]:
-            kb.button(text=f"• {m}", callback_data=f"pick_m:{m}")
-        kb.button(text="Продолжить ▶", callback_data="m_next")
-        kb.button(text="Пропустить", callback_data="m_skip")
-        kb.adjust(3)
-        await state.set_state(NewFilter.models)
-        await message.answer("Выбери одну или несколько моделей (жми по кнопкам). Когда готов — 'Продолжить'.", reply_markup=kb.as_markup())
-    else:
-        await state.set_state(NewFilter.models)
-        await message.answer("Модели не найдены для этой коллекции. Можно пропустить. Напиши 'пропустить' или отправь любой текст для перехода.")
+async def step_collection(message: Message, state: FSMContext):
+    col = message.text.strip()
+    names = await _all_collection_names()
+    if col not in names:
+        q = col.lower()
+        sug = [n for n in names if q in n.lower()][:10]
+        if sug:
+            sug_text = "\n• " + "\n• ".join(sug)
+            return await message.answer("Коллекция не найдена. Похожие:" + sug_text + "\n\nВведи точное имя.")
+        return await message.answer("Коллекция не найдена. Введи точное имя.")
+    await state.update_data(collection=col, m_page=0, b_page=0, picked_models=[], picked_backs=[])
+    models, backs = await _models_backs(col)
+    await state.update_data(all_models=models, all_backs=backs)
+    await state.set_state(NewFilter.models)
+    await message.answer("Выбери модели (можно несколько) или нажми «Пропустить».",
+                         reply_markup=make_toggle_keyboard(models, [], prefix="m"))
 
 @router.callback_query(NewFilter.models, F.data.startswith("pick_m:"))
 async def pick_model(cb: CallbackQuery, state: FSMContext):
     m = cb.data.split(":",1)[1]
     data = await state.get_data()
-    picked = set(data.get("picked_models", set()))
-    if m in picked: picked.remove(m)
-    else: picked.add(m)
-    await state.update_data(picked_models=picked)
+    picked = set(data.get("picked_models", []))
+    picked.remove(m) if m in picked else picked.add(m)
+    await state.update_data(picked_models=list(picked))
+    page = data.get("m_page", 0)
+    await cb.message.edit_reply_markup(make_toggle_keyboard(data.get("all_models", []), list(picked), prefix="m", page=page))
     await cb.answer(f"Выбрано: {len(picked)}")
 
-@router.callback_query(NewFilter.models, F.data == "m_next")
-async def models_next(cb: CallbackQuery, state: FSMContext):
+@router.callback_query(NewFilter.models, F.data.startswith("m_page:"))
+async def page_models(cb: CallbackQuery, state: FSMContext):
+    page = int(cb.data.split(":",1)[1])
+    await state.update_data(m_page=page)
     data = await state.get_data()
-    backs = data.get("backs_choices", [])
-    if backs:
-        kb = InlineKeyboardBuilder()
-        for b in backs[:48]:
-            kb.button(text=f"• {b}", callback_data=f"pick_b:{b}")
-        kb.button(text="Продолжить ▶", callback_data="b_next")
-        kb.button(text="Пропустить", callback_data="b_skip")
-        kb.adjust(3)
-        await state.set_state(NewFilter.backdrops)
-        await cb.message.edit_text("Выбери один или несколько фонов. Когда готов — 'Продолжить'.", reply_markup=kb.as_markup())
-    else:
-        await state.set_state(NewFilter.backdrops)
-        await cb.message.edit_text("Фоны не найдены. Введи максимальную цену (TON):")
-        await state.set_state(NewFilter.max_price)
+    await cb.message.edit_reply_markup(make_toggle_keyboard(data.get("all_models", []), data.get("picked_models", []), prefix="m", page=page))
+    await cb.answer("Страница переключена")
 
 @router.callback_query(NewFilter.models, F.data == "m_skip")
-async def models_skip(cb: CallbackQuery, state: FSMContext):
-    await state.update_data(picked_models=set())
-    await cb.message.edit_text("Модели пропущены. Теперь фоны (или пропусти).")
-    await models_next(cb, state)
+async def skip_models(cb: CallbackQuery, state: FSMContext):
+    await state.update_data(picked_models=[])
+    await _go_backdrops(cb, state)
+
+@router.callback_query(NewFilter.models, F.data == "m_next")
+async def next_models(cb: CallbackQuery, state: FSMContext):
+    await _go_backdrops(cb, state)
+
+async def _go_backdrops(cb: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    backs = data.get("all_backs", [])
+    await state.set_state(NewFilter.backdrops)
+    await cb.message.edit_text("Выбери фоны (можно несколько) или нажми «Пропустить».",
+                               reply_markup=make_toggle_keyboard(backs, [], prefix="b"))
 
 @router.callback_query(NewFilter.backdrops, F.data.startswith("pick_b:"))
 async def pick_back(cb: CallbackQuery, state: FSMContext):
     b = cb.data.split(":",1)[1]
     data = await state.get_data()
-    picked = set(data.get("picked_backs", set()))
-    if b in picked: picked.remove(b)
-    else: picked.add(b)
-    await state.update_data(picked_backs=picked)
+    picked = set(data.get("picked_backs", []))
+    picked.remove(b) if b in picked else picked.add(b)
+    await state.update_data(picked_backs=list(picked))
+    page = data.get("b_page", 0)
+    await cb.message.edit_reply_markup(make_toggle_keyboard(data.get("all_backs", []), list(picked), prefix="b", page=page))
     await cb.answer(f"Выбрано: {len(picked)}")
 
-@router.callback_query(NewFilter.backdrops, F.data.in_(["b_next","b_skip"]))
-async def backs_next(cb: CallbackQuery, state: FSMContext):
-    if cb.data == "b_skip":
-        await state.update_data(picked_backs=set())
+@router.callback_query(NewFilter.backdrops, F.data.startswith("b_page:"))
+async def page_backs(cb: CallbackQuery, state: FSMContext):
+    page = int(cb.data.split(":",1)[1])
+    await state.update_data(b_page=page)
+    data = await state.get_data()
+    await cb.message.edit_reply_markup(make_toggle_keyboard(data.get("all_backs", []), data.get("picked_backs", []), prefix="b", page=page))
+    await cb.answer("Страница переключена")
+
+@router.callback_query(NewFilter.backdrops, F.data == "b_skip")
+async def skip_backs(cb: CallbackQuery, state: FSMContext):
+    await state.update_data(picked_backs=[])
+    await _ask_price(cb, state)
+
+@router.callback_query(NewFilter.backdrops, F.data == "b_next")
+async def next_backs(cb: CallbackQuery, state: FSMContext):
+    await _ask_price(cb, state)
+
+async def _ask_price(cb: CallbackQuery, state: FSMContext):
     await state.set_state(NewFilter.max_price)
-    await cb.message.edit_text("Введи максимальную цену в TON (число, например 3.5):")
+    await cb.message.edit_text("Введи максимальную цену в TON (например 3.5).")
 
 @router.message(NewFilter.max_price)
-async def add_filter_price(message: Message, state: FSMContext):
+async def step_price(message: Message, state: FSMContext):
     try:
         price = float(message.text.replace(",", ".").strip())
         if price <= 0: raise ValueError()
@@ -124,23 +170,19 @@ async def add_filter_price(message: Message, state: FSMContext):
         return await message.answer("Нужно положительное число, например 2.75")
     await state.update_data(max_price=price)
     await state.set_state(NewFilter.qty)
-    await message.answer("Сколько штук покупать максимум одним лотом? (целое число)")
+    await message.answer("Сколько штук покупать максимум одним лотом? (целое число > 0)")
 
 @router.message(NewFilter.qty)
-async def add_filter_qty(message: Message, state: FSMContext):
+async def step_qty(message: Message, state: FSMContext):
     try:
         qty = int(message.text.strip())
-        if qty <= 0:
-            raise ValueError()
+        if qty <= 0: raise ValueError()
     except Exception:
         return await message.answer("Нужно целое число > 0.")
-
     await state.update_data(qty=qty)
     data = await state.get_data()
-
     models = ", ".join(sorted(data.get("picked_models", []))) or "любой"
     backs  = ", ".join(sorted(data.get("picked_backs", []))) or "любой"
-
     text = (
         f"Проверим:\n"
         f"Коллекция: {data['collection']}\n"
@@ -150,61 +192,30 @@ async def add_filter_qty(message: Message, state: FSMContext):
         f"Количество: {qty}\n\n"
         f"Подтвердить? /save или /cancel"
     )
-
     await state.set_state(NewFilter.confirm)
     await message.answer(text)
 
 @router.message(NewFilter.confirm, Command("save"))
-async def add_filter_save(message: Message, state: FSMContext):
+async def step_save(message: Message, state: FSMContext):
     data = await state.get_data()
-    user_id = message.from_user.id
-    # ensure user exists
     from db.db import get_pool
     pool = await get_pool()
-    await pool.execute("INSERT INTO users(telegram_id) VALUES($1) ON CONFLICT (telegram_id) DO NOTHING", user_id)
+    await pool.execute("INSERT INTO users(telegram_id) VALUES($1) ON CONFLICT (telegram_id) DO NOTHING", message.from_user.id)
+    user_id = await pool.fetchval("SELECT id FROM users WHERE telegram_id=$1", message.from_user.id)
     fid = await db.add_filter(
-        user_id=(await pool.fetchval("SELECT id FROM users WHERE telegram_id=$1", user_id)),
+        user_id=user_id,
         collection=data["collection"],
-        model=list(data.get("picked_models", [])) or None,
-        backdrop=list(data.get("picked_backs", [])) or None,
+        model=(data.get("picked_models") or None),
+        backdrop=(data.get("picked_backs") or None),
         max_price=data["max_price"],
         quantity=data["qty"],
         active=True
     )
-    await db.log("bot", "add_filter", "ok", filter_id=fid, user_id=user_id, details="fsm save")
-    await message.answer(f"Сохранено. ID фильтра: {fid}")
+    await db.log("bot", "add_filter", "ok", filter_id=fid, user_id=message.from_user.id, details="fsm save")
     await state.clear()
+    await message.answer(f"Сохранено. ID фильтра: {fid}")
 
 @router.message(NewFilter.confirm, Command("cancel"))
-async def add_filter_cancel(message: Message, state: FSMContext):
+async def step_cancel(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Отменено.")
-
-# --- Simple /edit_filter and /delete_filter via inline list ---
-@router.message(Command("filters"))
-async def list_filters(message: Message):
-    if await _cancel_if_not_allowed(message): return
-    from db.db import get_pool
-    pool = await get_pool()
-    uid = await pool.fetchval("SELECT id FROM users WHERE telegram_id=$1", message.from_user.id)
-    if not uid:
-        return await message.answer("Фильтров нет.")
-    rows = await pool.fetch("SELECT * FROM filters WHERE user_id=$1 ORDER BY id DESC", uid)
-    if not rows:
-        return await message.answer("Фильтров нет.")
-    text_lines = []
-    kb = InlineKeyboardBuilder()
-    for r in rows:
-        text_lines.append(f"#{r['id']} {r['collection']} | price≤{r['max_price']} | qty={r['quantity']} | {'ON' if r['active'] else 'OFF'}")
-        kb.button(text=f"✏️ {r['id']}", callback_data=f"edit:{r['id']}")
-        kb.button(text=f"🗑 {r['id']}", callback_data=f"del:{r['id']}")
-    kb.adjust(4)
-    await message.answer("\n".join(text_lines), reply_markup=kb.as_markup())
-
-@router.callback_query(F.data.startswith("del:"))
-async def delete_filter_cb(cb: CallbackQuery):
-    fid = int(cb.data.split(":")[1])
-    await db.delete_filter(fid)
-    await db.log("bot", "delete_filter", "ok", filter_id=fid, user_id=cb.from_user.id)
-    await cb.answer("Удалено")
-    await cb.message.edit_text("Удалено.")

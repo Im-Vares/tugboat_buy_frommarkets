@@ -33,39 +33,21 @@ class DB:
             "VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
             source, action, kw.get("gift_id"), kw.get("filter_id"),
             kw.get("user_id"), kw.get("price"), result, kw.get("details"),
-        )
-
+        )\n
 async def add_filter(self, user_id: int, collection: str, model, backdrop, max_price: float, quantity: int, active: bool=True) -> int:
     pool = await get_pool()
     row = await pool.fetchrow(
-        "INSERT INTO filters(user_id, collection, model, backdrop, max_price, quantity, active) "
-        "VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",
+        "INSERT INTO filters(user_id, collection, model, backdrop, max_price, quantity, active) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",
         user_id, collection, model, backdrop, max_price, quantity, active
     )
     return row["id"]
-
-async def update_filter(self, fid: int, **fields) -> None:
-    if not fields:
-        return
-    pool = await get_pool()
-    cols, vals = [], []
-    for k, v in fields.items():
-        cols.append(f"{k} = ${len(vals)+1}")
-        vals.append(v)
-    vals.append(fid)
-    q = f"UPDATE filters SET {', '.join(cols)} WHERE id = ${len(vals)}"
-    await pool.execute(q, *vals)
-
+\n
 async def delete_filter(self, fid: int) -> None:
     pool = await get_pool()
     await pool.execute("DELETE FROM filters WHERE id=$1", fid)
-
-async def filters_by_user(self, user_id: int):
+\n
+async def get_active_filters(self):
     pool = await get_pool()
-    rows = await pool.fetch("SELECT * FROM filters WHERE user_id=$1 ORDER BY id DESC", user_id)
+    rows = await pool.fetch("SELECT * FROM filters WHERE active = TRUE ORDER BY id DESC")
     return [dict(r) for r in rows]
-
-async def get_filter(self, fid: int):
-    pool = await get_pool()
-    row = await pool.fetchrow("SELECT * FROM filters WHERE id=$1", fid)
-    return dict(row) if row else None
+\n
