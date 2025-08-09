@@ -52,8 +52,8 @@ async def _get_auth():
     return await update_auth(
         api_id=settings.TG_API_ID,
         api_hash=settings.TG_API_HASH,
-        session_path=settings.TG_SESSION_PATH,
-        session_name=getattr(settings, "TG_SESSION_NAME", "account"),
+        session_path=settings.SESSION_PATH,
+        session_name=getattr(settings, "SESSION_NAME", "account"),
     )
 
 
