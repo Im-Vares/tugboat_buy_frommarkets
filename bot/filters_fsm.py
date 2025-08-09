@@ -10,7 +10,8 @@ import asyncio
 from db.db_class import DB
 from config.config import settings
 from aportalsmp.auth import update_auth
-from aportalsmp.gifts import collections as gifts_collections, filterFloors as gifts_filterFloors, search as gifts_search
+from aportalsmp.gifts import collections as gifts_collections, filterFloors as gifts_filterFloors, search as gifts_search, giftsFloors as gifts_floors
+from aportalsmp.utils.functions import toShortName
 
 router = Router()
 db = DB()
@@ -75,7 +76,7 @@ async def _all_collection_names(deep: bool = False):
     auth = await _get_auth()
     names = set()
 
-    # A) try official endpoint first
+    # A) try official endpoint first (may return empty on some builds)
     try:
         cols = await gifts_collections(limit=1000, authData=auth)
         d = cols.toDict() if hasattr(cols, "toDict") else {}
@@ -92,11 +93,22 @@ async def _all_collection_names(deep: bool = False):
     except Exception:
         pass
 
-    # B) fallback: collect unique names from market listings via search() with multiple sorts
-    if not names:
-        LIMIT = 100
-        pages = _FALLBACK_PAGES_DEEP if deep else _FALLBACK_PAGES_LIGHT
-        sorts = ("price_asc", "latest", "gift_id_asc", "price_desc")
+    # B) fallback 1: cover ALL collections via floors short-names
+    short_names = set()
+    try:
+        floors = await gifts_floors(auth)
+        fd = floors.toDict() if hasattr(floors, "toDict") else floors
+        if isinstance(fd, dict):
+            short_names.update(fd.keys())
+    except Exception:
+        pass
+
+    # Build mapping short->pretty using market search (works reliably)
+    pretty_by_short = {}
+    LIMIT = 100
+    pages = _FALLBACK_PAGES_DEEP if deep else _FALLBACK_PAGES_LIGHT
+    sorts = ("price_asc", "latest", "gift_id_asc", "price_desc")
+    try:
         for s in sorts:
             for page in range(pages):
                 try:
@@ -106,10 +118,33 @@ async def _all_collection_names(deep: bool = False):
                 if not batch:
                     break
                 for g in batch:
-                    nm = getattr(g, "name", None) or (g.get("name") if isinstance(g, dict) else None)
-                    if nm:
-                        names.add(nm)
-                await asyncio.sleep(0.1)  # бережно к API
+                    # full name seen on market
+                    full = getattr(g, "name", None) or (g.get("name") if isinstance(g, dict) else None)
+                    if not full:
+                        continue
+                    # normalize to short
+                    try:
+                        sh = toShortName(full)
+                    except Exception:
+                        sh = None
+                    if sh:
+                        pretty_by_short.setdefault(sh, full)
+                    # сразу добавим известные красивые имена
+                    names.add(full)
+                await asyncio.sleep(0.05)
+    except Exception:
+        pass
+
+    # Объединяем: для каждого short из floors — берём красивое имя, иначе оставляем short
+    for sh in short_names:
+        nm = pretty_by_short.get(sh)
+        if not nm:
+            # простая эвристика из short -> Title Case
+            word = sh.replace("_", " ").replace("-", " ")
+            if word.islower():
+                word = " ".join([w.capitalize() for w in [word]])
+            nm = word
+        names.add(nm)
 
     out = sorted(names)
     _COLL_CACHE.update(ts=now, names=out)
